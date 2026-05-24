@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { db } from '../config/database';
+import { env } from '../config/env';
 import { Logger } from '../services/logger';
 import { MoySkladClient } from '../services/moysklad-client';
 
@@ -19,6 +20,10 @@ async function getAccountClient(accountId: string | number): Promise<MoySkladCli
   const account = await db('accounts').where('id', accountId).first();
   if (!account) return null;
   return new MoySkladClient(account.api_token, account.id);
+}
+
+function getMoySkladError(err: any) {
+  return err.response?.data || err.message || 'Unknown MoySklad API error';
 }
 
 // ===================== GROUPS =====================
@@ -173,6 +178,55 @@ router.delete('/accounts/:id', async (req: Request, res: Response) => {
     res.json({ ok: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/accounts/:id/webhooks/demand', async (req: Request, res: Response) => {
+  try {
+    const account = await db('accounts').where('id', req.params.id).first();
+    if (!account) {
+      res.status(404).json({ error: 'Account not found' });
+      return;
+    }
+
+    const client = new MoySkladClient(account.api_token, account.id);
+    const webhookUrl = `${env.publicBaseUrl}/api/webhook/${encodeURIComponent(account.ms_account_id)}`;
+    const existing = await client.getWebhooks();
+    const existingRows = existing.rows || [];
+    const actions = ['CREATE', 'UPDATE'];
+    const savedWebhooks = [];
+
+    for (const action of actions) {
+      const payload = {
+        url: webhookUrl,
+        action,
+        entityType: 'demand',
+        enabled: true,
+      };
+
+      const current = existingRows.find((row: any) => row.entityType === 'demand' && row.action === action);
+      if (current?.id) {
+        savedWebhooks.push(await client.updateWebhook(current.id, payload));
+      } else {
+        savedWebhooks.push(await client.createWebhook(payload));
+      }
+    }
+
+    await Logger.info(`Demand webhooks configured for account "${account.name}"`, account.group_id, {
+      accountId: account.id,
+      msAccountId: account.ms_account_id,
+      webhookUrl,
+      actions,
+    });
+
+    res.json({ ok: true, webhookUrl, webhooks: savedWebhooks });
+  } catch (err: any) {
+    const account = await db('accounts').where('id', req.params.id).first();
+    await Logger.error(`Failed to configure Demand webhooks: ${JSON.stringify(getMoySkladError(err))}`, account?.group_id, {
+      accountId: req.params.id,
+      error: getMoySkladError(err),
+    });
+    res.status(500).json({ error: getMoySkladError(err) });
   }
 });
 

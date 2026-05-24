@@ -4,6 +4,7 @@ dotenv.config();
 export const env = {
   port: parseInt(process.env.PORT || '3000'),
   nodeEnv: process.env.NODE_ENV || 'development',
+  publicBaseUrl: (process.env.PUBLIC_BASE_URL || 'https://moysklad-hub.167-235-195-185.sslip.io').replace(/\/$/, ''),
   sessionSecret: process.env.SESSION_SECRET || 'change-me',
   db: {
     host: process.env.DB_HOST || 'localhost',

@@ -147,6 +147,20 @@ async function deleteAccount(id) {
   }
 }
 
+async function createDemandWebhooks(id) {
+  if (!confirm('Создать или обновить webhooks МоегоСклада для отгрузок этого аккаунта?')) return;
+
+  try {
+    const res = await fetch(`/api/accounts/${id}/webhooks/demand`, { method: 'POST' });
+    const payload = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(JSON.stringify(payload.error || payload));
+
+    alert(`Webhooks созданы.\nURL: ${payload.webhookUrl}\nСобытия: Demand CREATE и UPDATE`);
+  } catch (err) {
+    alert('Ошибка создания webhooks: ' + err.message);
+  }
+}
+
 // Routes Matrix & Group Isolation Logic
 function filterRouteAccounts() {
   const selectedGroupId = document.getElementById('routeGroupFilter').value;

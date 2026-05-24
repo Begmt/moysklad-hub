@@ -11,6 +11,7 @@ services:
     environment:
       PORT: 3000
       NODE_ENV: production
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-https://moysklad-hub.167-235-195-185.sslip.io}
       SESSION_SECRET: ${SESSION_SECRET}
       DB_HOST: postgres
       DB_PORT: 5432

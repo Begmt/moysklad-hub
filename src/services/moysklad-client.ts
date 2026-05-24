@@ -124,6 +124,18 @@ export class MoySkladClient {
     return this.requestWithRetry('get', '/entity/store?limit=100');
   }
 
+  async getWebhooks(): Promise<any> {
+    return this.requestWithRetry('get', '/entity/webhook?limit=100');
+  }
+
+  async createWebhook(webhookData: any): Promise<any> {
+    return this.requestWithRetry('post', '/entity/webhook', webhookData);
+  }
+
+  async updateWebhook(webhookId: string, webhookData: any): Promise<any> {
+    return this.requestWithRetry('put', `/entity/webhook/${webhookId}`, webhookData);
+  }
+
   async getAccountInfo(): Promise<any> {
     return this.requestWithRetry('get', '/context/employee');
   }

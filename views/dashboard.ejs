@@ -131,6 +131,7 @@
             <td><code class="code-inline"><%= acc.ms_account_id %></code></td>
             <td><code class="code-inline"><%= acc.api_token_masked %></code></td>
             <td class="actions-cell">
+              <button class="btn btn-primary btn-xs" onclick="createDemandWebhooks(<%= acc.id %>)">Webhook</button>
               <button class="btn btn-ghost btn-xs" onclick="editAccount(<%= acc.id %>)">Изменить</button>
               <button class="btn btn-danger btn-xs" onclick="deleteAccount(<%= acc.id %>)">Удалить</button>
             </td>
