@@ -25,8 +25,20 @@ services:
       MS_TARGET_DEMAND_STATE: ${MS_TARGET_DEMAND_STATE:-}
       ADMIN_USERNAME: ${ADMIN_USERNAME}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: moysklad-hub-caddy
+    restart: unless-stopped
+    depends_on:
+      - app
     ports:
-      - "80:3000"
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
 
   postgres:
     image: postgres:16-alpine
@@ -59,3 +71,5 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  caddy_data:
+  caddy_config:
