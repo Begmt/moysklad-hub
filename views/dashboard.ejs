@@ -1,0 +1,372 @@
+<%- include('partials/header') %>
+
+<div class="page-header">
+  <h1>Панель управления</h1>
+  <p class="subtitle">Синхронизация документов между независимыми аккаунтами МойСклад</p>
+</div>
+
+<!-- Карточки статистики -->
+<div class="stats-grid">
+  <div class="stat-card stat-groups">
+    <div class="stat-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+    </div>
+    <div class="stat-info">
+      <span class="stat-value"><%= stats.totalGroups %></span>
+      <span class="stat-label">Группы (Кластеры)</span>
+    </div>
+  </div>
+  <div class="stat-card stat-accounts">
+    <div class="stat-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    </div>
+    <div class="stat-info">
+      <span class="stat-value"><%= stats.totalAccounts %></span>
+      <span class="stat-label">Подключено аккаунтов</span>
+    </div>
+  </div>
+  <div class="stat-card stat-routes">
+    <div class="stat-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    </div>
+    <div class="stat-info">
+      <span class="stat-value"><%= stats.activeRoutes %>/<%= stats.totalRoutes %></span>
+      <span class="stat-label">Активные маршруты</span>
+    </div>
+  </div>
+  <div class="stat-card stat-errors">
+    <div class="stat-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    </div>
+    <div class="stat-info">
+      <span class="stat-value"><%= stats.errorsToday %></span>
+      <span class="stat-label">Ошибок сегодня</span>
+    </div>
+  </div>
+</div>
+
+<!-- Группы -->
+<section class="card-section">
+  <div class="section-header">
+    <h2>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      Группы аккаунтов (Изолированные кластеры)
+    </h2>
+    <button class="btn btn-primary btn-sm" onclick="openModal('groupModal')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Добавить группу
+    </button>
+  </div>
+  <div class="table-wrapper">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Название группы</th>
+          <th>Аккаунтов</th>
+          <th>Создано</th>
+          <th>Действия</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (groups.length === 0) { %>
+          <tr><td colspan="5" class="empty-state">Группы пока не созданы</td></tr>
+        <% } %>
+        <% groups.forEach(function(group) { %>
+          <tr>
+            <td><span class="badge badge-id">#<%= group.id %></span></td>
+            <td><strong><%= group.name %></strong></td>
+            <td><%= accounts.filter(a => a.group_id === group.id).length %></td>
+            <td><%= new Date(group.created_at).toLocaleDateString('ru-RU') %></td>
+            <td class="actions-cell">
+              <button class="btn btn-ghost btn-xs" onclick="editGroup(<%= group.id %>, '<%= group.name %>')">Изменить</button>
+              <button class="btn btn-danger btn-xs" onclick="deleteGroup(<%= group.id %>)">Удалить</button>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Аккаунты -->
+<section class="card-section">
+  <div class="section-header">
+    <h2>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      Подключенные аккаунты МойСклад
+    </h2>
+    <button class="btn btn-primary btn-sm" onclick="openModal('accountModal')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Подключить аккаунт
+    </button>
+  </div>
+  <div class="table-wrapper">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Имя аккаунта</th>
+          <th>Группа</th>
+          <th>MS Account ID (UUID)</th>
+          <th>Токен API</th>
+          <th>Действия</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (accounts.length === 0) { %>
+          <tr><td colspan="6" class="empty-state">Нет подключенных аккаунтов</td></tr>
+        <% } %>
+        <% accounts.forEach(function(acc) { %>
+          <tr>
+            <td><span class="badge badge-id">#<%= acc.id %></span></td>
+            <td><strong><%= acc.name %></strong></td>
+            <td>
+              <% if (acc.group_name) { %>
+                <span class="badge badge-group"><%= acc.group_name %></span>
+              <% } else { %>
+                <span class="badge badge-none">Без группы</span>
+              <% } %>
+            </td>
+            <td><code class="code-inline"><%= acc.ms_account_id %></code></td>
+            <td><code class="code-inline"><%= acc.api_token_masked %></code></td>
+            <td class="actions-cell">
+              <button class="btn btn-ghost btn-xs" onclick="editAccount(<%= acc.id %>)">Изменить</button>
+              <button class="btn btn-danger btn-xs" onclick="deleteAccount(<%= acc.id %>)">Удалить</button>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Матрица роутинга -->
+<section class="card-section">
+  <div class="section-header">
+    <h2>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Матрица роутинга документов (Только внутри групп)
+    </h2>
+    <button class="btn btn-primary btn-sm" onclick="openModal('routeModal')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Добавить маршрут
+    </button>
+  </div>
+  <div class="table-wrapper">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Исходный аккаунт (Отгрузка)</th>
+          <th>UUID контрагента (Агент)</th>
+          <th>Целевой аккаунт (Приемка)</th>
+          <th>UUID поставщика в получателе</th>
+          <th>UUID орг. получателя</th>
+          <th>UUID склада получателя</th>
+          <th>Статус</th>
+          <th>Действия</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (routes.length === 0) { %>
+          <tr><td colspan="9" class="empty-state">Маршруты синхронизации не настроены</td></tr>
+        <% } %>
+        <% routes.forEach(function(route) { %>
+          <tr>
+            <td><span class="badge badge-id">#<%= route.id %></span></td>
+            <td><%= route.source_account_name %></td>
+            <td><code class="code-inline code-small"><%= route.agent_uuid.substring(0, 12) %>...</code></td>
+            <td><%= route.target_account_name %></td>
+            <td><code class="code-inline code-small"><%= route.target_agent_uuid ? route.target_agent_uuid.substring(0, 12) + '...' : '—' %></code></td>
+            <td><code class="code-inline code-small"><%= route.target_organization_uuid.substring(0, 12) %>...</code></td>
+            <td><code class="code-inline code-small"><%= route.target_store_uuid.substring(0, 12) %>...</code></td>
+            <td>
+              <% if (route.is_active) { %>
+                <span class="badge badge-success">Активен</span>
+              <% } else { %>
+                <span class="badge badge-inactive">Отключен</span>
+              <% } %>
+            </td>
+            <td class="actions-cell">
+              <button class="btn btn-ghost btn-xs" onclick="toggleRoute(<%= route.id %>, <%= !route.is_active %>)">
+                <%= route.is_active ? 'Отключить' : 'Включить' %>
+              </button>
+              <button class="btn btn-danger btn-xs" onclick="deleteRoute(<%= route.id %>)">Удалить</button>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Логи -->
+<section class="card-section">
+  <div class="section-header">
+    <h2>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      Последняя активность
+    </h2>
+    <a href="/logs" class="btn btn-ghost btn-sm">Все логи</a>
+  </div>
+  <div class="table-wrapper">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Время</th>
+          <th>Уровень</th>
+          <th>Группа</th>
+          <th>Сообщение</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (logs.length === 0) { %>
+          <tr><td colspan="4" class="empty-state">Логи событий отсутствуют</td></tr>
+        <% } %>
+        <% logs.forEach(function(log) { %>
+          <tr>
+            <td class="nowrap"><%= new Date(log.created_at).toLocaleString('ru-RU') %></td>
+            <td>
+              <span class="badge badge-<%= log.level.toLowerCase() %>">
+                <%= log.level === 'INFO' ? 'ИНФО' : log.level === 'WARNING' ? 'ПРЕДУПРЕЖДЕНИЕ' : 'ОШИБКА' %>
+              </span>
+            </td>
+            <td><%= log.group_name || '—' %></td>
+            <td class="log-message"><%= log.message %></td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ========== МОДАЛЬНЫЕ ОКНА ========== -->
+
+<!-- Группы -->
+<div class="modal-overlay" id="groupModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="groupModalTitle">Добавить группу</h3>
+      <button class="modal-close" onclick="closeModal('groupModal')">&times;</button>
+    </div>
+    <form id="groupForm" onsubmit="saveGroup(event)">
+      <input type="hidden" id="groupId" value="">
+      <div class="form-group">
+        <label for="groupName">Название группы</label>
+        <input type="text" id="groupName" placeholder="Например: Розничная сеть или Опт" required>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="closeModal('groupModal')">Отмена</button>
+        <button type="submit" class="btn btn-primary">Сохранить</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Аккаунты -->
+<div class="modal-overlay" id="accountModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Подключить аккаунт</h3>
+      <button class="modal-close" onclick="closeModal('accountModal')">&times;</button>
+    </div>
+    <form id="accountForm" onsubmit="saveAccount(event)">
+      <input type="hidden" id="accountId" value="">
+      <div class="form-group">
+        <label for="accountGroup">Группа (Кластер)</label>
+        <select id="accountGroup" required>
+          <option value="">— Выберите группу —</option>
+          <% groups.forEach(function(g) { %>
+            <option value="<%= g.id %>"><%= g.name %></option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="accountName">Имя аккаунта (Алиас)</label>
+        <input type="text" id="accountName" placeholder="Например: Склад Чиланзар" required>
+      </div>
+      <div class="form-group">
+        <label for="accountMsId">ID аккаунта МойСклад (ms_account_id)</label>
+        <input type="text" id="accountMsId" placeholder="UUID аккаунта" required>
+      </div>
+      <div class="form-group">
+        <label for="accountToken">API Bearer Токен</label>
+        <textarea id="accountToken" rows="3" placeholder="Введите административный API токен МойСклад" required></textarea>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="closeModal('accountModal')">Отмена</button>
+        <button type="submit" class="btn btn-primary">Сохранить</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Маршруты -->
+<div class="modal-overlay" id="routeModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Добавить маршрут синхронизации</h3>
+      <button class="modal-close" onclick="closeModal('routeModal')">&times;</button>
+    </div>
+    <form id="routeForm" onsubmit="saveRoute(event)">
+      <div class="form-group">
+        <label for="routeGroupFilter">Фильтр по группе аккаунтов</label>
+        <select id="routeGroupFilter" onchange="filterRouteAccounts()" required>
+          <option value="">— Выберите группу —</option>
+          <% groups.forEach(function(g) { %>
+            <option value="<%= g.id %>"><%= g.name %></option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="routeSource">Исходный аккаунт (где создается Отгрузка)</label>
+        <select id="routeSource" onchange="loadSourceCounterparties()" required>
+          <option value="">— Выберите источник —</option>
+          <% accounts.forEach(function(a) { %>
+            <option value="<%= a.id %>" data-group="<%= a.group_id %>"><%= a.name %></option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="routeAgentUuid">Контрагент в аккаунте-отправителе</label>
+        <select id="routeAgentUuid" required disabled>
+          <option value="">— Сначала выберите аккаунт-отправитель —</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="routeTarget">Целевой аккаунт (где создается Приемка)</label>
+        <select id="routeTarget" onchange="loadTargetDirectories()" required>
+          <option value="">— Выберите получателя —</option>
+          <% accounts.forEach(function(a) { %>
+            <option value="<%= a.id %>" data-group="<%= a.group_id %>"><%= a.name %></option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="routeTargetAgentUuid">Контрагент-поставщик в аккаунте-получателе</label>
+        <select id="routeTargetAgentUuid" required disabled>
+          <option value="">— Сначала выберите аккаунт-получатель —</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="routeOrgUuid">Организация в аккаунте-получателе</label>
+        <select id="routeOrgUuid" required disabled>
+          <option value="">— Сначала выберите аккаунт-получатель —</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="routeStoreUuid">Склад в аккаунте-получателе</label>
+        <select id="routeStoreUuid" required disabled>
+          <option value="">— Сначала выберите аккаунт-получатель —</option>
+        </select>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="closeModal('routeModal')">Отмена</button>
+        <button type="submit" class="btn btn-primary">Создать маршрут</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<%- include('partials/footer') %>

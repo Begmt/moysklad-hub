@@ -1,0 +1,12 @@
+node_modules
+dist
+.env
+*.log
+deploy_key
+deploy_key.pub
+tmp_askpass.*
+tmp_known_hosts
+server.out.log
+server.err.log
+startup-error.log
+.git

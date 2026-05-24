@@ -1,0 +1,61 @@
+services:
+  app:
+    build: .
+    container_name: moysklad-hub-app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      PORT: 3000
+      NODE_ENV: production
+      SESSION_SECRET: ${SESSION_SECRET}
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: moysklad_hub
+      DB_USER: postgres
+      DB_PASSWORD: ${DB_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ""
+      MS_API_BASE_URL: https://api.moysklad.ru/api/remap/1.2
+      MS_RATE_LIMIT_PER_200MS: 3
+      MS_TARGET_DEMAND_STATE: ${MS_TARGET_DEMAND_STATE:-}
+      ADMIN_USERNAME: ${ADMIN_USERNAME}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+    ports:
+      - "80:3000"
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: moysklad-hub-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: moysklad_hub
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d moysklad_hub"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    container_name: moysklad-hub-redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  postgres_data:
+  redis_data:

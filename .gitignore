@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+*.log
+deploy_key
+deploy_key.pub
+tmp_askpass.*
+tmp_known_hosts
+startup-error.log

@@ -1,0 +1,110 @@
+<%- include('partials/header') %>
+
+<div class="page-header">
+  <h1>Логи системы</h1>
+  <p class="subtitle">Детализированная история синхронизаций документов</p>
+</div>
+
+<!-- Фильтры -->
+<div class="filter-bar">
+  <form method="GET" action="/logs" class="filter-form">
+    <div class="form-group inline-group">
+      <label for="filterGroup">Группа:</label>
+      <select id="filterGroup" name="group_id">
+        <option value="">Все группы</option>
+        <% groups.forEach(function(g) { %>
+          <option value="<%= g.id %>" <%= filters.group_id == g.id ? 'selected' : '' %>><%= g.name %></option>
+        <% }); %>
+      </select>
+    </div>
+
+    <div class="form-group inline-group">
+      <label for="filterLevel">Уровень:</label>
+      <select id="filterLevel" name="level">
+        <option value="">Все уровни</option>
+        <option value="INFO" <%= filters.level === 'INFO' ? 'selected' : '' %>>ИНФО</option>
+        <option value="WARNING" <%= filters.level === 'WARNING' ? 'selected' : '' %>>ПРЕДУПРЕЖДЕНИЯ</option>
+        <option value="ERROR" <%= filters.level === 'ERROR' ? 'selected' : '' %>>ОШИБКИ</option>
+      </select>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Фильтровать</button>
+    <a href="/logs" class="btn btn-ghost">Сбросить</a>
+  </form>
+</div>
+
+<!-- Таблица логов -->
+<section class="card-section">
+  <div class="table-wrapper">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Время</th>
+          <th>Уровень</th>
+          <th>Группа</th>
+          <th>Сообщение</th>
+          <th>Детали</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (logs.length === 0) { %>
+          <tr><td colspan="5" class="empty-state">Нет логов, удовлетворяющих условиям фильтра</td></tr>
+        <% } %>
+        <% logs.forEach(function(log) { %>
+          <tr>
+            <td class="nowrap"><%= new Date(log.created_at).toLocaleString('ru-RU') %></td>
+            <td>
+              <span class="badge badge-<%= log.level.toLowerCase() %>">
+                <%= log.level === 'INFO' ? 'ИНФО' : log.level === 'WARNING' ? 'ПРЕДУПРЕЖДЕНИЕ' : 'ОШИБКА' %>
+              </span>
+            </td>
+            <td><%= log.group_name || '—' %></td>
+            <td class="log-message"><strong><%= log.message %></strong></td>
+            <td>
+              <% if (log.details) { %>
+                <button class="btn btn-ghost btn-xs" onclick="viewLogDetails(<%= JSON.stringify(log.details) %>)">
+                  Показать JSON
+                </button>
+              <% } else { %>
+                <span class="text-muted">—</span>
+              <% } %>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Пагинация -->
+  <% if (pagination.totalPages > 1) { %>
+    <div class="pagination">
+      <% if (pagination.page > 1) { %>
+        <a href="/logs?page=<%= pagination.page - 1 %>&group_id=<%= filters.group_id || '' %>&level=<%= filters.level || '' %>" class="btn btn-ghost btn-sm">&laquo; Назад</a>
+      <% } %>
+      
+      <span class="pagination-info">Страница <%= pagination.page %> из <%= pagination.totalPages %></span>
+
+      <% if (pagination.page < pagination.totalPages) { %>
+        <a href="/logs?page=<%= pagination.page + 1 %>&group_id=<%= filters.group_id || '' %>&level=<%= filters.level || '' %>" class="btn btn-ghost btn-sm">Вперед &raquo;</a>
+      <% } %>
+    </div>
+  <% } %>
+</section>
+
+<!-- Модалка JSON -->
+<div class="modal-overlay" id="detailsModal">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3>Детализация данных (API Payload)</h3>
+      <button class="modal-close" onclick="closeModal('detailsModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <pre><code id="jsonViewer" class="json-code"></code></pre>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-primary" onclick="closeModal('detailsModal')">Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<%- include('partials/footer') %>
