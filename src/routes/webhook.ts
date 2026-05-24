@@ -14,6 +14,43 @@ async function enqueueDemand(accountMsId: string, demandId: string): Promise<voi
   );
 }
 
+function asEventList(payload: any): any[] {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.events)) return payload.events;
+  if (Array.isArray(payload?.rows)) return payload.rows;
+  if (payload && typeof payload === 'object') return [payload];
+  return [];
+}
+
+function extractDemandId(event: any): string | null {
+  const hrefs = [
+    event?.meta?.href,
+    event?.href,
+    event?.entity?.meta?.href,
+    event?.object?.meta?.href,
+    event?.entityHref,
+  ].filter(Boolean);
+
+  for (const href of hrefs) {
+    const match = String(href).match(/\/entity\/demand\/([^/?#]+)/);
+    if (match?.[1]) return match[1];
+  }
+
+  if (event?.entityType === 'demand' && event?.entityId) return String(event.entityId);
+  if (event?.meta?.type === 'demand' && event?.id) return String(event.id);
+  return null;
+}
+
+function isDemandEvent(event: any): boolean {
+  if (event?.meta?.type === 'demand' || event?.entityType === 'demand') return true;
+  return Boolean(extractDemandId(event));
+}
+
+function shouldProcessAction(event: any): boolean {
+  const action = event?.action || event?.actionType;
+  return !action || action === 'UPDATE' || action === 'CREATE';
+}
+
 /**
  * GET /api/webhook/:accountMsId?id=:demandId
  * Simple scenario webhook URL for MoySklad UI.
@@ -53,31 +90,18 @@ router.get('/:accountMsId', async (req: Request, res: Response) => {
 router.post('/:accountMsId', async (req: Request, res: Response) => {
   try {
     const accountMsId = String(req.params.accountMsId);
-    const events = req.body;
-
-    if (!Array.isArray(events)) {
-      res.status(400).json({ error: 'Expected array of webhook events' });
-      return;
-    }
+    const events = asEventList(req.body);
 
     let enqueued = 0;
 
     for (const event of events) {
-      // Only process Demand events
-      if (event.meta?.type !== 'demand') continue;
-
-      // Extract demand UUID from meta.href
-      const href: string = event.meta?.href || '';
-      const demandId = href.split('/').pop();
-
+      if (!isDemandEvent(event)) continue;
+      if (!shouldProcessAction(event)) continue;
+      const demandId = extractDemandId(event);
       if (!demandId) {
         await Logger.warning('Webhook event missing demand ID', undefined, { event });
         continue;
       }
-
-      // Only process UPDATE and CREATE actions
-      const action = event.action;
-      if (action !== 'UPDATE' && action !== 'CREATE') continue;
 
       await enqueueDemand(accountMsId, demandId);
       enqueued++;
