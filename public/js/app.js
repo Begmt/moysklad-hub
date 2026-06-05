@@ -155,7 +155,7 @@ async function createDemandWebhooks(id) {
     const payload = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(JSON.stringify(payload.error || payload));
 
-    alert(`Webhooks созданы.\nURL: ${payload.webhookUrl}\nСобытия: Demand CREATE и UPDATE`);
+    alert(`Webhooks созданы.\nURL: ${payload.webhookUrl}\nСобытия: Отгрузка CREATE/UPDATE и Возврат поставщику CREATE/UPDATE`);
   } catch (err) {
     alert('Ошибка создания webhooks: ' + err.message);
   }

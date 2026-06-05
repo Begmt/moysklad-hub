@@ -99,6 +99,14 @@ export class MoySkladClient {
     return this.requestWithRetry('get', `/entity/demand/${demandId}/positions?expand=assortment&limit=100`);
   }
 
+  async getPurchaseReturn(purchaseReturnId: string): Promise<any> {
+    return this.requestWithRetry('get', `/entity/purchasereturn/${purchaseReturnId}?expand=positions.assortment,agent`);
+  }
+
+  async getPurchaseReturnPositions(purchaseReturnId: string): Promise<any> {
+    return this.requestWithRetry('get', `/entity/purchasereturn/${purchaseReturnId}/positions?expand=assortment&limit=100`);
+  }
+
   async findProductByArticle(article: string): Promise<any> {
     return this.requestWithRetry('get', `/entity/assortment?filter=code=${encodeURIComponent(article)}&limit=1`);
   }

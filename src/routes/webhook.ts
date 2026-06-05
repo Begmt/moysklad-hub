@@ -4,14 +4,18 @@ import { Logger } from '../services/logger';
 
 const router = Router();
 
-async function enqueueDemand(accountMsId: string, demandId: string): Promise<void> {
+async function enqueueDocument(accountMsId: string, documentType: string, documentId: string): Promise<void> {
   await syncQueue.add(
-    `sync-${accountMsId}-${demandId}`,
-    { accountMsId, demandId },
+    `sync-${accountMsId}-${documentType}-${documentId}`,
+    { accountMsId, documentType, documentId },
     {
-      jobId: `${accountMsId}:${demandId}:${Date.now()}`,
+      jobId: `${accountMsId}:${documentType}:${documentId}:${Date.now()}`,
     }
   );
+}
+
+async function enqueueDemand(accountMsId: string, demandId: string): Promise<void> {
+  await enqueueDocument(accountMsId, 'demand', demandId);
 }
 
 function asEventList(payload: any): any[] {
@@ -22,7 +26,10 @@ function asEventList(payload: any): any[] {
   return [];
 }
 
-function extractDemandId(event: any): string | null {
+function extractDocumentType(event: any): string | null {
+  const explicitType = event?.meta?.type || event?.entityType || event?.type;
+  if (explicitType === 'demand' || explicitType === 'purchasereturn') return explicitType;
+
   const hrefs = [
     event?.meta?.href,
     event?.href,
@@ -32,18 +39,35 @@ function extractDemandId(event: any): string | null {
   ].filter(Boolean);
 
   for (const href of hrefs) {
-    const match = String(href).match(/\/entity\/demand\/([^/?#]+)/);
+    const match = String(href).match(/\/entity\/(demand|purchasereturn)\//);
     if (match?.[1]) return match[1];
   }
 
-  if (event?.entityType === 'demand' && event?.entityId) return String(event.entityId);
-  if (event?.meta?.type === 'demand' && event?.id) return String(event.id);
   return null;
 }
 
-function isDemandEvent(event: any): boolean {
-  if (event?.meta?.type === 'demand' || event?.entityType === 'demand') return true;
-  return Boolean(extractDemandId(event));
+function extractDocumentId(event: any): string | null {
+  const documentType = extractDocumentType(event);
+  const hrefs = [
+    event?.meta?.href,
+    event?.href,
+    event?.entity?.meta?.href,
+    event?.object?.meta?.href,
+    event?.entityHref,
+  ].filter(Boolean);
+
+  for (const href of hrefs) {
+    const match = String(href).match(/\/entity\/(demand|purchasereturn)\/([^/?#]+)/);
+    if (match?.[2]) return match[2];
+  }
+
+  if (documentType && event?.entityId) return String(event.entityId);
+  if (documentType && event?.id) return String(event.id);
+  return null;
+}
+
+function isSupportedDocumentEvent(event: any): boolean {
+  return Boolean(extractDocumentType(event) && extractDocumentId(event));
 }
 
 function shouldProcessAction(event: any): boolean {
@@ -95,20 +119,21 @@ router.post('/:accountMsId', async (req: Request, res: Response) => {
     let enqueued = 0;
 
     for (const event of events) {
-      if (!isDemandEvent(event)) continue;
+      if (!isSupportedDocumentEvent(event)) continue;
       if (!shouldProcessAction(event)) continue;
-      const demandId = extractDemandId(event);
-      if (!demandId) {
-        await Logger.warning('Webhook event missing demand ID', undefined, { event });
+      const documentType = extractDocumentType(event);
+      const documentId = extractDocumentId(event);
+      if (!documentType || !documentId) {
+        await Logger.warning('Webhook event missing document type or ID', undefined, { event });
         continue;
       }
 
-      await enqueueDemand(accountMsId, demandId);
+      await enqueueDocument(accountMsId, documentType, documentId);
       enqueued++;
     }
 
     await Logger.info(
-      `Webhook received: ${events.length} events, ${enqueued} demand(s) enqueued`,
+      `Webhook received: ${events.length} events, ${enqueued} document(s) enqueued`,
       undefined,
       { accountMsId, totalEvents: events.length, enqueued }
     );

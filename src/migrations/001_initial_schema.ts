@@ -35,12 +35,15 @@ export async function up(knex: Knex): Promise<void> {
   // 4. Document Links
   await knex.schema.createTable('document_links', (table) => {
     table.increments('id').primary();
-    table.string('source_demand_uuid', 255).unique().notNullable();
+    table.string('source_document_type', 50).notNullable().defaultTo('demand');
+    table.string('source_demand_uuid', 255).notNullable();
     table.string('target_enter_uuid', 255).unique().notNullable();
     table.integer('source_account_id').references('id').inTable('accounts').onDelete('CASCADE');
     table.integer('target_account_id').references('id').inTable('accounts').onDelete('CASCADE');
     table.timestamp('updated_at').defaultTo(knex.fn.now());
+    table.unique(['source_document_type', 'source_demand_uuid']);
     table.index('source_demand_uuid');
+    table.index(['source_document_type', 'source_demand_uuid']);
   });
 
   // 5. Sync Logs

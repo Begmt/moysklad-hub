@@ -30,9 +30,11 @@ export function startWorker(): Worker {
   const worker = new Worker(
     'demand-sync',
     async (job: Job) => {
-      const { accountMsId, demandId } = job.data;
-      await Logger.info(`Processing job ${job.id}: demand ${demandId} from account ${accountMsId}`);
-      await syncEngine.processDemandWebhook(accountMsId, demandId);
+      const { accountMsId, demandId, documentId, documentType } = job.data;
+      const type = documentType || 'demand';
+      const id = documentId || demandId;
+      await Logger.info(`Processing job ${job.id}: ${type} ${id} from account ${accountMsId}`);
+      await syncEngine.processDocumentWebhook(accountMsId, type, id);
     },
     {
       connection,
@@ -56,6 +58,6 @@ export function startWorker(): Worker {
     });
   });
 
-  console.log('[Queue] Worker started, listening for demand-sync jobs...');
+  console.log('[Queue] Worker started, listening for document sync jobs...');
   return worker;
 }

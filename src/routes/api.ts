@@ -194,35 +194,39 @@ router.post('/accounts/:id/webhooks/demand', async (req: Request, res: Response)
     const existing = await client.getWebhooks();
     const existingRows = existing.rows || [];
     const actions = ['CREATE', 'UPDATE'];
+    const entityTypes = ['demand', 'purchasereturn'];
     const savedWebhooks = [];
 
-    for (const action of actions) {
-      const payload = {
-        url: webhookUrl,
-        action,
-        entityType: 'demand',
-        enabled: true,
-      };
+    for (const entityType of entityTypes) {
+      for (const action of actions) {
+        const payload = {
+          url: webhookUrl,
+          action,
+          entityType,
+          enabled: true,
+        };
 
-      const current = existingRows.find((row: any) => row.entityType === 'demand' && row.action === action);
-      if (current?.id) {
-        savedWebhooks.push(await client.updateWebhook(current.id, payload));
-      } else {
-        savedWebhooks.push(await client.createWebhook(payload));
+        const current = existingRows.find((row: any) => row.entityType === entityType && row.action === action);
+        if (current?.id) {
+          savedWebhooks.push(await client.updateWebhook(current.id, payload));
+        } else {
+          savedWebhooks.push(await client.createWebhook(payload));
+        }
       }
     }
 
-    await Logger.info(`Demand webhooks configured for account "${account.name}"`, account.group_id, {
+    await Logger.info(`Document webhooks configured for account "${account.name}"`, account.group_id, {
       accountId: account.id,
       msAccountId: account.ms_account_id,
       webhookUrl,
       actions,
+      entityTypes,
     });
 
     res.json({ ok: true, webhookUrl, webhooks: savedWebhooks });
   } catch (err: any) {
     const account = await db('accounts').where('id', req.params.id).first();
-    await Logger.error(`Failed to configure Demand webhooks: ${JSON.stringify(getMoySkladError(err))}`, account?.group_id, {
+    await Logger.error(`Failed to configure document webhooks: ${JSON.stringify(getMoySkladError(err))}`, account?.group_id, {
       accountId: req.params.id,
       error: getMoySkladError(err),
     });
