@@ -5,11 +5,15 @@ import { Logger } from '../services/logger';
 const router = Router();
 
 async function enqueueDocument(accountMsId: string, documentType: string, documentId: string): Promise<void> {
+  const jobId = [accountMsId, documentType, documentId, Date.now()]
+    .map((part) => String(part).replace(/[^a-zA-Z0-9_-]/g, '-'))
+    .join('-');
+
   await syncQueue.add(
     `sync-${accountMsId}-${documentType}-${documentId}`,
     { accountMsId, documentType, documentId },
     {
-      jobId: `${accountMsId}:${documentType}:${documentId}:${Date.now()}`,
+      jobId,
     }
   );
 }
